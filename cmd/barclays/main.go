@@ -43,7 +43,7 @@ func main() {
 	}
 }
 
-func parse(f io.ReadCloser, w *csv.Writer) error {
+func parse(f io.Reader, w *csv.Writer) error {
 	var sortCode, accountNumber, desc, account string
 
 	r := csv.NewReader(f)
