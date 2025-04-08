@@ -44,10 +44,7 @@ func main() {
 }
 
 func parse(f io.ReadCloser, w *csv.Writer) error {
-	var (
-		sortCode, accountNumber int
-		desc, account           string
-	)
+	var sortCode, accountNumber, desc, account string
 
 	r := csv.NewReader(f)
 	r.Comma = '|'
@@ -58,35 +55,29 @@ func parse(f io.ReadCloser, w *csv.Writer) error {
 		if errors.Is(err, csv.ErrFieldCount) {
 			line := record[0]
 			switch {
-			case sortCode == 0 && sortCodeMatcher.MatchString(line):
+			case sortCode == "" && sortCodeMatcher.MatchString(line):
 				match := sortCodeMatcher.FindString(line)
 				if match == "" {
 					continue
 				}
-				sortCode, err = strconv.Atoi(match)
-				if err != nil {
-					return err
-				}
+				sortCode = match[:2] + "-" + match[2:4] + "-" + match[4:]
 				fallthrough
-			case accountNumber == 0 && accountNumberMatcher.MatchString(line):
+			case accountNumber == "" && accountNumberMatcher.MatchString(line):
 				match := accountNumberMatcher.FindString(line)
 				if match == "" {
 					continue
 				}
-				accountNumber, err = strconv.Atoi(match[:4] + match[5:])
-				if err != nil {
-					return err
-				}
+				accountNumber = match[:4] + match[5:]
 			}
 			continue
 		}
 		if err != nil {
 			return err
 		}
-		if sortCode == 0 || accountNumber == 0 {
-			return fmt.Errorf("sort code %d or account number %d not found", sortCode, accountNumber)
+		if sortCode == "" || accountNumber == "" {
+			return fmt.Errorf("sort code %s or account number %s not found", sortCode, accountNumber)
 		} else if account == "" {
-			account = fmt.Sprintf("%06d %08d", sortCode, accountNumber)
+			account = fmt.Sprintf("%s %s", sortCode, accountNumber)
 		}
 
 		details, payments, receipts, date, running := strings.TrimSpace(record[0]), strings.TrimSpace(record[1]), strings.TrimRight(record[2], "C "), strings.TrimSpace(record[3]), strings.TrimSpace(record[4])
