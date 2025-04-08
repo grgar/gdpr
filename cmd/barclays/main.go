@@ -82,7 +82,9 @@ func parse(f io.Reader, w *csv.Writer) error {
 
 		details, payments, receipts, date, running := strings.TrimSpace(record[0]), strings.TrimSpace(record[1]), strings.TrimRight(record[2], "C "), strings.TrimSpace(record[3]), strings.TrimSpace(record[4])
 		if payments == "" && receipts == "" {
-			desc = details
+			if date == "" {
+				desc = details
+			}
 			continue
 		}
 		if payments != "" {
