@@ -1,0 +1,21 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "barclays",
+			"type": "go",
+			"request": "launch",
+			"mode": "auto",
+			"program": "cmd/barclays/main.go",
+			"args": "${input:args}",
+		}
+	],
+	"inputs": [
+		{
+			"id": "args",
+			"type": "promptString",
+			"description": "Arguments to pass to the program",
+			"default": ""
+		}
+	]
+}
