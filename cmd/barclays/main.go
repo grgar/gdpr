@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -80,7 +81,7 @@ func parse(f io.Reader, w *csv.Writer) error {
 			account = fmt.Sprintf("%s %s", sortCode, accountNumber)
 		}
 
-		details, payments, receipts, date, running := strings.TrimSpace(record[0]), strings.TrimSpace(record[1]), strings.TrimRight(record[2], "C "), strings.TrimSpace(record[3]), strings.TrimSpace(record[4])
+		details, payments, receipts, date, running := strings.TrimSpace(record[0]), strings.TrimSpace(record[1]), strings.TrimRightFunc(record[2], func(r rune) bool { return !unicode.IsDigit(r) }), strings.TrimSpace(record[3]), strings.TrimSpace(record[4])
 		if payments == "" && receipts == "" {
 			if date == "" {
 				if desc != "" {
