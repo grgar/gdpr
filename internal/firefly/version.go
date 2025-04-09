@@ -9,11 +9,11 @@ type Version struct{}
 
 func (Version) Run(ctx context.Context, a API) error {
 	var resp struct {
-		Data map[string]string `json:"data"`
+		Version string `json:"version"`
 	}
-	if err := Get(ctx, a, "api/v1/about", &resp); err != nil {
+	if err := Do(ctx, a, "about", nil, &resp, nil); err != nil {
 		return err
 	}
-	slog.Info("about", slog.String("version", resp.Data["version"]))
+	slog.Info("about", slog.String("version", resp.Version))
 	return nil
 }

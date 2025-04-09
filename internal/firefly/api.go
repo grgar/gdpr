@@ -2,9 +2,12 @@ package firefly
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/go-json-experiment/json"
 )
@@ -22,21 +25,69 @@ func (a API) authHeader() http.Header {
 	return h
 }
 
-func Get[T any](ctx context.Context, a API, path string, resp *T) error {
-	u, err := url.JoinPath(a.Endpoint.String(), path)
+type overrideReaderContextKey struct{}
+
+var OverrideReaderContextKey = overrideReaderContextKey{}
+
+func Do[T any](ctx context.Context, a API, path string, q url.Values, out *T, r io.Reader) error {
+	u, err := url.JoinPath(a.Endpoint.String(), "api/v1", path)
 	if err != nil {
 		panic(err)
 	}
+	if len(q) > 0 {
+		u += "?" + q.Encode()
+	}
 	slog.Info("making request", slog.String("url", u))
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	var body io.Reader
+	if value := ctx.Value(OverrideReaderContextKey); value != nil {
+		body = value.(io.Reader)
+	} else {
+		method := http.MethodGet
+		if r != nil {
+			method = http.MethodPost
+		}
+		req, err := http.NewRequestWithContext(ctx, method, u, r)
+		if err != nil {
+			return err
+		}
+		req.Header = a.authHeader()
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(io.LimitReader(res.Body, 1<<10))
+			return fmt.Errorf("status %d: %s", res.StatusCode, string(body))
+		}
+		body = res.Body
+	}
+	resp := struct {
+		Data *T `json:"data"`
+		Meta struct {
+			Pagination struct {
+				Count int `json:"count"`
+				Total int `json:"total"`
+			} `json:"pagination"`
+		} `json:"meta"`
+	}{Data: out}
+	defer func() {
+		slog.Info("pagination", slog.Int("count", resp.Meta.Pagination.Count), slog.Int("total", resp.Meta.Pagination.Total))
+	}()
+	return json.UnmarshalRead(body, &resp)
+}
+
+type StringInt int
+
+func (s StringInt) MarshalText() ([]byte, error) {
+	return []byte(strconv.Itoa(int(s))), nil
+}
+
+func (s *StringInt) UnmarshalText(b []byte) error {
+	value, err := strconv.Atoi(string(b))
 	if err != nil {
 		return err
 	}
-	req.Header = a.authHeader()
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	return json.UnmarshalRead(res.Body, &resp)
+	*s = StringInt(value)
+	return nil
 }

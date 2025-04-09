@@ -17,7 +17,9 @@ type CLI struct {
 	API       firefly.API `embed:""`
 	TokenFile []byte      `help:"Access token file path (instead of --token)" type:"filecontent"`
 
-	Version firefly.Version `cmd:""`
+	Fetch   firefly.Fetch   `cmd:"" help:"Fetch from the given path"`
+	Version firefly.Version `cmd:"" help:"Show version"`
+	Link    firefly.Link    `cmd:"" help:"Link transactions to another"`
 }
 
 func main() {
