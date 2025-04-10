@@ -18,6 +18,15 @@
 			"program": "cmd/firefly/main.go",
 			"args": "${input:args}",
 			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "reexport",
+			"type": "go",
+			"request": "launch",
+			"mode": "auto",
+			"program": "cmd/reexport/main.go",
+			"args": "${input:args}",
+			"cwd": "${workspaceFolder}"
 		}
 	],
 	"inputs": [
