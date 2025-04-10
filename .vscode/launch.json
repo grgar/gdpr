@@ -27,6 +27,15 @@
 			"program": "cmd/reexport/main.go",
 			"args": "${input:args}",
 			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "match",
+			"type": "go",
+			"request": "launch",
+			"mode": "auto",
+			"program": "cmd/match/main.go",
+			"args": "${input:args}",
+			"cwd": "${workspaceFolder}"
 		}
 	],
 	"inputs": [

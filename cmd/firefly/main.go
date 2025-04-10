@@ -20,6 +20,7 @@ type CLI struct {
 	Fetch   firefly.Fetch   `cmd:"" help:"Fetch from the given path"`
 	Version firefly.Version `cmd:"" help:"Show version"`
 	Link    firefly.Link    `cmd:"" help:"Link transactions to another"`
+	Match   firefly.Match   `cmd:""`
 }
 
 func main() {

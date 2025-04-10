@@ -91,3 +91,18 @@ func (s *StringInt) UnmarshalText(b []byte) error {
 	*s = StringInt(value)
 	return nil
 }
+
+type StringFloat float64
+
+func (s StringFloat) MarshalText() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(s), 'f', 2, 64)), nil
+}
+
+func (s *StringFloat) UnmarshalText(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+	*s = StringFloat(value)
+	return nil
+}
