@@ -29,7 +29,7 @@ type overrideReaderContextKey struct{}
 
 var OverrideReaderContextKey = overrideReaderContextKey{}
 
-func Do[T any](ctx context.Context, a API, path string, q url.Values, out *T, r io.Reader) error {
+func Do[T any](ctx context.Context, a API, method, path string, q url.Values, out *T, r io.Reader) error {
 	u, err := url.JoinPath(a.Endpoint.String(), "api/v1", path)
 	if err != nil {
 		panic(err)
@@ -42,10 +42,6 @@ func Do[T any](ctx context.Context, a API, path string, q url.Values, out *T, r 
 	if value := ctx.Value(OverrideReaderContextKey); value != nil {
 		body = value.(io.Reader)
 	} else {
-		method := http.MethodGet
-		if r != nil {
-			method = http.MethodPost
-		}
 		req, err := http.NewRequestWithContext(ctx, method, u, r)
 		if err != nil {
 			return err

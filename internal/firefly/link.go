@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -38,7 +39,7 @@ func (l Link) Run(ctx context.Context, a API) error {
 	if len(l.Input) > 0 {
 		ctx = context.WithValue(ctx, OverrideReaderContextKey, bytes.NewReader(l.Input))
 	}
-	if err := Do(ctx, a, "search/transactions", q, &resp, nil); err != nil {
+	if err := Do(ctx, a, "search/transactions", http.MethodGet, q, &resp, nil); err != nil {
 		return err
 	}
 	ctx = context.WithValue(ctx, OverrideReaderContextKey, nil)
@@ -66,7 +67,7 @@ func (l Link) Run(ctx context.Context, a API) error {
 				q := make(url.Values, 1)
 				q.Add("query", `external_id_is:`+dst)
 				q.Add("limit", "1")
-				if err := Do(ctx, a, "search/transactions", q, &resp, nil); err != nil {
+				if err := Do(ctx, a, "search/transactions", http.MethodGet, q, &resp, nil); err != nil {
 					return err
 				}
 				if len(resp) == 0 {
@@ -84,7 +85,7 @@ func (l Link) Run(ctx context.Context, a API) error {
 				}
 				var out any
 				slog.Info("creating link", slog.String("payload", string(p)))
-				if err := Do(ctx, a, "transaction-links", nil, &out, bytes.NewReader(p)); err != nil {
+				if err := Do(ctx, a, http.MethodPost, "transaction-links", nil, &out, bytes.NewReader(p)); err != nil {
 					slog.Error("failed to create link", slog.Int("id", int(t.ID)), slog.String("err", err.Error()))
 					continue
 				}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"slices"
@@ -58,7 +59,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 		var res []transactions
 		q := make(url.Values, 1)
 		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s", m.AccountID, date.Format("2006-01-02"), amount))
-		if err := Do(ctx, a, "search/transactions", q, &res, nil); err != nil {
+		if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
 			return err
 		}
 
@@ -88,7 +89,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 				if payment {
 					source, destination, t = destination, source, "withdrawal"
 				}
-				if err := create(ctx, a, transaction{
+				if err := upsert(ctx, a, http.MethodPost, transaction{
 					Date:          date,
 					Type:          t,
 					Description:   record[2],
@@ -101,7 +102,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 				continue
 			}
 			var re transactions
-			if err := Do(ctx, a, "transactions/"+strconv.Itoa(id), nil, &re, nil); err != nil {
+			if err := Do(ctx, a, http.MethodGet, "transactions/"+strconv.Itoa(id), nil, &re, nil); err != nil {
 				return err
 			}
 			res = []transactions{re}
@@ -144,7 +145,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 				if payment {
 					source, destination, t = destination, source, "withdrawal"
 				}
-				if err := create(ctx, a, transaction{
+				if err := upsert(ctx, a, http.MethodPost, transaction{
 					Date:          date,
 					Type:          t,
 					Description:   record[2],
@@ -158,6 +159,14 @@ func (m Match) Run(ctx context.Context, a API) error {
 			selection = options[i]
 		}
 		l.Info("made selection", slog.String("selection", selection.String()))
+
+		if selection.Description == "(empty description)" {
+			l.Info("description was empty")
+			selection.Description = record[2]
+			if err := upsert(ctx, a, http.MethodPut, selection); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -197,7 +206,7 @@ func askID(title string) (int, error) {
 	return strconv.Atoi(m.Value())
 }
 
-func create(ctx context.Context, a API, t transaction) error {
+func upsert(ctx context.Context, a API, method string, t transaction) error {
 	body, err := json.Marshal(transactionUpdate{
 		Transactions: []transaction{t},
 	})
@@ -205,7 +214,11 @@ func create(ctx context.Context, a API, t transaction) error {
 		return err
 	}
 	var out any
-	if err := Do(ctx, a, "transactions", nil, &out, bytes.NewReader(body)); err != nil {
+	path := "transactions"
+	if method == http.MethodPut {
+		path += "/" + strconv.Itoa(int(t.ID))
+	}
+	if err := Do(ctx, a, method, path, nil, &out, bytes.NewReader(body)); err != nil {
 		return err
 	}
 	json.MarshalWrite(os.Stdout, out)

@@ -2,6 +2,7 @@ package firefly
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -19,7 +20,7 @@ func (f Fetch) Run(ctx context.Context, a API) error {
 		q.Add(k, v)
 	}
 	var resp any
-	if err := Do(ctx, a, f.Path, q, &resp, nil); err != nil {
+	if err := Do(ctx, a, http.MethodGet, f.Path, q, &resp, nil); err != nil {
 		return err
 	}
 	return json.MarshalWrite(os.Stdout, resp)
