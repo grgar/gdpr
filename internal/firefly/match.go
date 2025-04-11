@@ -18,7 +18,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/list"
 	"github.com/charmbracelet/bubbles/v2/textinput"
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/go-json-experiment/json"
 )
 
@@ -155,6 +154,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 				}); err != nil {
 					return err
 				}
+				continue
 			}
 			selection = options[i]
 		}
@@ -173,16 +173,13 @@ func (m Match) Run(ctx context.Context, a API) error {
 }
 
 func pick(options []transaction, title string) (int, error) {
-	l := list.New(make([]list.Item, len(options)), itemDelegate{options}, 73, min(len(options), 3))
+	l := list.New(make([]list.Item, len(options)), itemDelegate{options}, 73, min(len(options)+6, 10))
 	l.Title = title
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	m := listModel{Model: l}
 	_, err := tea.NewProgram(&m).Run()
-	if !m.bool {
-		return -1, nil
-	}
-	return l.Index(), err
+	return m.int, err
 }
 
 func askID(title string) (int, error) {
@@ -227,12 +224,14 @@ func upsert(ctx context.Context, a API, method string, t transaction) error {
 
 type listModel struct {
 	list.Model
-	bool
+	int
 }
 
 func (m listModel) Init() tea.Cmd { return nil }
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd := keypress(msg); cmd != nil {
+		// workaround global index being 0 after exit
+		m.int = m.Model.GlobalIndex()
 		return m, cmd
 	}
 	var cmd tea.Cmd
@@ -240,10 +239,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-type textModel struct {
-	textinput.Model
-	bool
-}
+type textModel struct{ textinput.Model }
 
 func (m textModel) Init() tea.Cmd { return nil }
 func (m *textModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -297,15 +293,21 @@ type transactions struct {
 	Attributes transactionUpdate `json:"attributes"`
 }
 
+type simpleItem string
+
+var _ list.DefaultItem = (*simpleItem)(nil)
+
+func (s simpleItem) FilterValue() string { return string(s) }
+func (s simpleItem) Title() string       { return string(s) }
+func (s simpleItem) Description() string { return "" }
+
 type itemDelegate struct{ options []transaction }
 
 func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
 func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, i int, _ list.Item) {
-	style := lipgloss.NewStyle()
-	if m.Index() == i {
-		style = style.Bold(true)
-	}
-	fmt.Fprint(w, style.Render(d.options[i].String()))
+	dd := list.NewDefaultDelegate()
+	dd.ShowDescription = false
+	dd.Render(w, m, i, simpleItem(d.options[i].String()))
 }
