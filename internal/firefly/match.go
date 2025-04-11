@@ -119,6 +119,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 			options := slices.Collect(func(yield func(transaction) bool) {
 				for i := range res {
 					for j := range res[i].Attributes.Transactions {
+						res[i].Attributes.Transactions[j].topID = int(res[i].ID)
 						if !yield(res[i].Attributes.Transactions[j]) {
 							return
 						}
@@ -243,7 +244,7 @@ func upsert(ctx context.Context, a API, method string, t transaction) error {
 	var out any
 	path := "transactions"
 	if method == http.MethodPut {
-		path += "/" + strconv.Itoa(int(t.ID))
+		path += "/" + strconv.Itoa(int(t.topID))
 	}
 	if err := Do(ctx, a, method, path, nil, &out, bytes.NewReader(body)); err != nil {
 		return err
@@ -308,6 +309,8 @@ type transaction struct {
 	DestinationID StringInt   `json:"destination_id,omitzero"`
 	Amount        StringFloat `json:"amount"`
 	Tags          []string    `json:"tags,omitzero"`
+
+	topID int
 }
 
 func (t transaction) String() string {
