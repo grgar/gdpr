@@ -37,7 +37,7 @@ func Do[T any](ctx context.Context, a API, method, path string, q url.Values, ou
 	if len(q) > 0 {
 		u += "?" + q.Encode()
 	}
-	slog.Info("making request", slog.String("url", u))
+	slog.Info("making request", slog.String("method", method), slog.String("url", u))
 	var body io.Reader
 	if value := ctx.Value(OverrideReaderContextKey); value != nil {
 		body = value.(io.Reader)

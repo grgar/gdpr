@@ -57,7 +57,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 
 		var res []transactions
 		q := make(url.Values, 1)
-		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s", m.AccountID, date.Format("2006-01-02"), amount))
+		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:gdpr", m.AccountID, date.Format("2006-01-02"), amount))
 		if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
 			return err
 		}
@@ -160,12 +160,24 @@ func (m Match) Run(ctx context.Context, a API) error {
 		}
 		l.Info("made selection", slog.String("selection", selection.String()))
 
-		if selection.Description == "(empty description)" {
+		switch selection.Description {
+		case "(empty description)":
 			l.Info("description was empty")
 			selection.Description = record[2]
-			if err := upsert(ctx, a, http.MethodPut, selection); err != nil {
+		case record[2]:
+			l.Info("description already matches")
+		default:
+			desc, err := askText(title+" — "+selection.Description, record[2])
+			if err != nil {
 				return err
 			}
+			selection.Description = desc
+		}
+
+		selection.Tags = append(selection.Tags, "gdpr")
+
+		if err := upsert(ctx, a, http.MethodPut, selection); err != nil {
+			return err
 		}
 	}
 
@@ -201,6 +213,24 @@ func askID(title string) (int, error) {
 		return 0, err
 	}
 	return strconv.Atoi(m.Value())
+}
+
+func askText(title, value string) (string, error) {
+	fmt.Println(title)
+	input := textinput.New()
+	input.Focus()
+	input.Placeholder = ""
+	input.SetValue(value)
+	input.SetWidth(73)
+	m := textModel{Model: input}
+	_, err := tea.NewProgram(&m).Run()
+	if err != nil {
+		if m.Value() == "" {
+			return "", nil
+		}
+		return "", err
+	}
+	return m.Value(), nil
 }
 
 func upsert(ctx context.Context, a API, method string, t transaction) error {
@@ -241,7 +271,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 type textModel struct{ textinput.Model }
 
-func (m textModel) Init() tea.Cmd { return nil }
+func (m textModel) Init() tea.Cmd { return textinput.Blink }
 func (m *textModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd := keypress(msg); cmd != nil {
 		return m, cmd
@@ -277,6 +307,7 @@ type transaction struct {
 	Destination   string      `json:"destination_name,omitzero"`
 	DestinationID StringInt   `json:"destination_id,omitzero"`
 	Amount        StringFloat `json:"amount"`
+	Tags          []string    `json:"tags,omitzero"`
 }
 
 func (t transaction) String() string {
