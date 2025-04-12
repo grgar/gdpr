@@ -13,6 +13,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/list"
@@ -48,6 +49,16 @@ func (m Match) Run(ctx context.Context, a API) error {
 		if err != nil {
 			l.Warn("invalid date", slog.String("err", err.Error()), slog.String("record", record[0]))
 			continue
+		}
+		// process date → payment date
+		processDate, paymentDate := date, date
+		if _, r, ok := strings.Cut(record[2], " ON "); ok {
+			s := strings.SplitAfterN(r, " ", 3)
+			if len(s) == 3 {
+				if override, err := time.Parse("02 Jan 2006", s[0]+" "+s[1]+" "+strconv.Itoa(date.Year())); err == nil {
+					date, processDate = override, override
+				}
+			}
 		}
 
 		amount, payment := record[4], false
@@ -90,6 +101,8 @@ func (m Match) Run(ctx context.Context, a API) error {
 				}
 				if err := upsert(ctx, a, http.MethodPost, transaction{
 					Date:          date,
+					ProcessDate:   processDate,
+					PaymentDate:   paymentDate,
 					Type:          t,
 					Description:   record[2],
 					SourceID:      StringInt(source),
@@ -113,6 +126,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 				l.Error("target contains split, skipping", slog.Int("target", int(res[0].ID)))
 				continue
 			}
+			res[0].Attributes.Transactions[0].topID = int(res[0].ID)
 			selection = res[0].Attributes.Transactions[0]
 
 		default:
@@ -147,6 +161,8 @@ func (m Match) Run(ctx context.Context, a API) error {
 				}
 				if err := upsert(ctx, a, http.MethodPost, transaction{
 					Date:          date,
+					ProcessDate:   processDate,
+					PaymentDate:   paymentDate,
 					Type:          t,
 					Description:   record[2],
 					SourceID:      StringInt(source),
@@ -176,6 +192,8 @@ func (m Match) Run(ctx context.Context, a API) error {
 		}
 
 		selection.Tags = append(selection.Tags, "gdpr")
+		selection.PaymentDate = paymentDate
+		selection.ProcessDate = processDate
 
 		if err := upsert(ctx, a, http.MethodPut, selection); err != nil {
 			return err
@@ -301,6 +319,8 @@ type transactionUpdate struct {
 type transaction struct {
 	ID            StringInt   `json:"transaction_journal_id,omitzero"`
 	Date          time.Time   `json:"date"`
+	ProcessDate   time.Time   `json:"process_date,omitzero"` // start
+	PaymentDate   time.Time   `json:"payment_date,omitzero"` // end
 	Type          string      `json:"type"`
 	Description   string      `json:"description"`
 	Source        string      `json:"source_name,omitzero"`
