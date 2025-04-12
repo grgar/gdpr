@@ -26,6 +26,7 @@ type Match struct {
 	AccountID int    `short:"a" required:""`
 	File      []byte `type:"filecontent" required:""`
 	Start     int    `short:"s" help:"Start at row"`
+	AssetIDs  []int  `name:"assets" help:"Asset account IDs create transfers"`
 }
 
 func (m Match) Run(ctx context.Context, a API) error {
@@ -98,6 +99,9 @@ func (m Match) Run(ctx context.Context, a API) error {
 				source, destination, t := id, m.AccountID, "deposit"
 				if payment {
 					source, destination, t = destination, source, "withdrawal"
+				}
+				if slices.Contains(m.AssetIDs, source) && slices.Contains(m.AssetIDs, destination) {
+					t = "transfer"
 				}
 				if err := upsert(ctx, a, http.MethodPost, transaction{
 					Date:          date,
