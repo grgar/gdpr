@@ -23,10 +23,11 @@ import (
 )
 
 type Match struct {
-	AccountID int    `short:"a" required:""`
-	File      []byte `type:"filecontent" required:""`
-	Start     int    `short:"s" help:"Start at row"`
-	AssetIDs  []int  `name:"assets" help:"Asset account IDs create transfers"`
+	AccountID       int    `short:"a" required:""`
+	File            []byte `type:"filecontent" required:""`
+	Start           int    `short:"s" help:"Start at row"`
+	AssetIDs        []int  `name:"assets" help:"Asset account IDs create transfers"`
+	KeepDescription bool   `help:"Keep existing descriptions if set"`
 }
 
 func (m Match) Run(ctx context.Context, a API) error {
@@ -188,11 +189,13 @@ func (m Match) Run(ctx context.Context, a API) error {
 		case record[2]:
 			l.Info("description already matches")
 		default:
-			desc, err := askText(title+" — "+selection.Description, record[2])
-			if err != nil {
-				return err
+			if !m.KeepDescription {
+				desc, err := askText(title+" — "+selection.Description, record[2])
+				if err != nil {
+					return err
+				}
+				selection.Description = desc
 			}
-			selection.Description = desc
 		}
 
 		selection.Tags = append(selection.Tags, "gdpr")
