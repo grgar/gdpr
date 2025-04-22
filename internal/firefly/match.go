@@ -28,6 +28,7 @@ type Match struct {
 	Start           int    `short:"s" help:"Start at row"`
 	AssetIDs        []int  `name:"assets" help:"Asset account IDs create transfers"`
 	KeepDescription bool   `help:"Keep existing descriptions if set"`
+	Tag             string `required:"" help:"Tag to apply to matched transactions"`
 }
 
 type accountMapping map[string]int
@@ -84,7 +85,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 
 		var res []transactions
 		q := make(url.Values, 1)
-		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:gdpr", m.AccountID, date.Format("2006-01-02"), amount))
+		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:%s", m.AccountID, date.Format("2006-01-02"), amount, m.Tag))
 		if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
 			return err
 		}
@@ -92,7 +93,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 		if len(res) == 0 && !date.Equal(paymentDate) {
 			l.Info("no transactions found with process date, retrying with payment date")
 			q := make(url.Values, 1)
-			q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:gdpr", m.AccountID, paymentDate.Format("2006-01-02"), amount))
+			q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:%s", m.AccountID, paymentDate.Format("2006-01-02"), amount, m.Tag))
 			if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
 				return err
 			}
@@ -143,6 +144,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 					SourceID:      StringInt(source),
 					DestinationID: StringInt(destination),
 					Amount:        f,
+					Tags:          []string{m.Tag},
 				}); err != nil {
 					return err
 				}
@@ -203,6 +205,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 					SourceID:      StringInt(source),
 					DestinationID: StringInt(destination),
 					Amount:        f,
+					Tags:          []string{m.Tag},
 				}); err != nil {
 					return err
 				}
@@ -228,7 +231,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 			}
 		}
 
-		selection.Tags = append(selection.Tags, "gdpr")
+		selection.Tags = append(selection.Tags, m.Tag)
 		selection.PaymentDate = paymentDate
 		selection.ProcessDate = processDate
 
