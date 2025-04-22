@@ -30,6 +30,20 @@ type Match struct {
 	KeepDescription bool   `help:"Keep existing descriptions if set"`
 }
 
+type accountMapping map[string]int
+
+var mapping = accountMapping{
+}
+
+func (m accountMapping) match(s string) int {
+	for k, v := range mapping {
+		if strings.Contains(s, k) {
+			return v
+		}
+	}
+	return 0
+}
+
 func (m Match) Run(ctx context.Context, a API) error {
 	c := csv.NewReader(bytes.NewReader(m.File))
 	c.ReuseRecord = true
@@ -81,18 +95,24 @@ func (m Match) Run(ctx context.Context, a API) error {
 		var selection transaction
 		switch len(res) {
 		case 0:
-			l.Info("no transactions found, asking for id")
-			id, err := askID(title)
-			if err != nil {
-				return err
+			var id int
+			mappedAccountID := mapping.match(record[2])
+			if id == 0 && mappedAccountID == 0 {
+				id, err = askID(title)
+				if err != nil {
+					return err
+				}
 			}
 			if id == 0 {
 				var f StringFloat
 				f.UnmarshalText([]byte(amount))
 				l.Info("require opposing account ID", slog.Float64("amount", float64(f)))
-				id, err := askID(title)
-				if err != nil {
-					return err
+				id = mappedAccountID
+				if id == 0 {
+					id, err = askID(title)
+					if err != nil {
+						return err
+					}
 				}
 				if id == 0 {
 					return errors.New("cancelling")
