@@ -89,12 +89,22 @@ func (m Match) Run(ctx context.Context, a API) error {
 			return err
 		}
 
-		title := fmt.Sprintf("%d %s %q %s", row, record[1], record[2], amount)
+		if len(res) == 0 && !date.Equal(paymentDate) {
+			l.Info("no transactions found with process date, retrying with payment date")
+			q := make(url.Values, 1)
+			q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:gdpr", m.AccountID, paymentDate.Format("2006-01-02"), amount))
+			if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
+				return err
+			}
+		}
+
+		title := fmt.Sprintf("%d %s %q %v %s", row, record[1], record[2], payment, amount)
 		l = l.With("title", title)
 
 		var selection transaction
 		switch len(res) {
 		case 0:
+			l.Info("no transactions found with process date (or payment date if different), asking for ID to match")
 			var id int
 			mappedAccountID := mapping.match(record[2])
 			if id == 0 && mappedAccountID == 0 {
