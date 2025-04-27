@@ -1,18 +1,18 @@
 module go.grg.app/gdpr
 
-go 1.24.1
+go 1.24
 
 require (
 	github.com/alecthomas/kong v1.10.0
 	github.com/charmbracelet/bubbles/v2 v2.0.0-beta.1
 	github.com/charmbracelet/bubbletea/v2 v2.0.0-beta.1
-	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.1
 	github.com/go-json-experiment/json v0.0.0-20250223041408-d3c622f1b874
 )
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/colorprofile v0.3.0 // indirect
+	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.1 // indirect
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/input v0.3.4 // indirect
