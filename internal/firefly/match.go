@@ -316,6 +316,8 @@ func askText(title, value string) (string, error) {
 }
 
 func upsert(ctx context.Context, a API, method string, t transaction) error {
+	json.MarshalWrite(os.Stdout, t)
+	io.WriteString(os.Stdout, "\n")
 	body, err := json.Marshal(transactionUpdate{
 		Transactions: []transaction{t},
 	})
@@ -331,6 +333,7 @@ func upsert(ctx context.Context, a API, method string, t transaction) error {
 		return err
 	}
 	json.MarshalWrite(os.Stdout, out)
+	io.WriteString(os.Stdout, "\n")
 	return nil
 }
 
