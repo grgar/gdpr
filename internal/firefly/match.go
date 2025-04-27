@@ -29,12 +29,15 @@ type Match struct {
 	AssetIDs        []int  `name:"assets" help:"Asset account IDs create transfers"`
 	KeepDescription bool   `help:"Keep existing descriptions if set"`
 	Tag             string `required:"" help:"Tag to apply to matched transactions"`
+	ColDate         int    `required:"" help:"Column number for date, one-indexed"`
+	ColDescription  int    `required:"" help:"Column number for description"`
+	ColAmount       int    `required:"" help:"Column number for amount, +deposit, -withdrawal"`
+	ColWithdrawal   int    `help:"Column number for payment, if applicable"`
 }
 
 type accountMapping map[string]int
 
-var mapping = accountMapping{
-}
+var mapping = accountMapping{}
 
 func (m accountMapping) match(s string) int {
 	for k, v := range mapping {
@@ -62,14 +65,14 @@ func (m Match) Run(ctx context.Context, a API) error {
 			continue
 		}
 
-		date, err := time.Parse("02 Jan 06", record[1])
+		date, err := time.Parse("02 Jan 06", record[m.ColDate-1])
 		if err != nil {
-			l.Warn("invalid date", slog.String("err", err.Error()), slog.String("record", record[0]))
+			l.Warn("invalid date", slog.String("err", err.Error()), slog.String("record", record[m.ColDate-1]))
 			continue
 		}
 		// process date → payment date
 		processDate, paymentDate := date, date
-		if _, r, ok := strings.Cut(record[2], " ON "); ok {
+		if _, r, ok := strings.Cut(record[m.ColDescription-1], " ON "); ok {
 			s := strings.SplitAfterN(r, " ", 3)
 			if len(s) == 3 {
 				if override, err := time.Parse("02 Jan 2006", s[0]+" "+s[1]+" "+strconv.Itoa(date.Year())); err == nil {
@@ -78,9 +81,23 @@ func (m Match) Run(ctx context.Context, a API) error {
 			}
 		}
 
-		amount, payment := record[4], false
-		if amount == "" {
-			amount, payment = record[3], true
+		var (
+			amount  string
+			payment bool
+		)
+		if m.ColWithdrawal > 0 {
+			amount = record[m.ColWithdrawal-1]
+			if amount != "" {
+				payment = true
+			} else {
+				amount = record[m.ColAmount-1]
+			}
+		} else {
+			amount = record[m.ColAmount-1]
+			if strings.HasPrefix(amount, "-") {
+				amount = strings.TrimPrefix(amount, "-")
+				payment = true
+			}
 		}
 
 		var res []transactions
@@ -99,7 +116,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 			}
 		}
 
-		title := fmt.Sprintf("%d %s %q %v %s", row, record[1], record[2], payment, amount)
+		title := fmt.Sprintf("%d %s %q %v %s", row, record[m.ColDate-1], record[m.ColDescription-1], payment, amount)
 		l = l.With("title", title)
 
 		var selection transaction
@@ -107,7 +124,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 		case 0:
 			l.Info("no transactions found with process date (or payment date if different), asking for ID to match")
 			var id int
-			mappedAccountID := mapping.match(record[2])
+			mappedAccountID := mapping.match(record[m.ColDescription-1])
 			if id == 0 && mappedAccountID == 0 {
 				id, err = askID(title)
 				if err != nil {
@@ -140,7 +157,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 					ProcessDate:   processDate,
 					PaymentDate:   paymentDate,
 					Type:          t,
-					Description:   record[2],
+					Description:   record[m.ColDescription-1],
 					SourceID:      StringInt(source),
 					DestinationID: StringInt(destination),
 					Amount:        f,
@@ -201,7 +218,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 					ProcessDate:   processDate,
 					PaymentDate:   paymentDate,
 					Type:          t,
-					Description:   record[2],
+					Description:   record[m.ColDescription-1],
 					SourceID:      StringInt(source),
 					DestinationID: StringInt(destination),
 					Amount:        f,
@@ -218,12 +235,12 @@ func (m Match) Run(ctx context.Context, a API) error {
 		switch selection.Description {
 		case "(empty description)":
 			l.Info("description was empty")
-			selection.Description = record[2]
-		case record[2]:
+			selection.Description = record[m.ColDescription-1]
+		case record[m.ColDescription-1]:
 			l.Info("description already matches")
 		default:
 			if !m.KeepDescription {
-				desc, err := askText(title+" — "+selection.Description, record[2])
+				desc, err := askText(title+" — "+selection.Description, record[m.ColDescription-1])
 				if err != nil {
 					return err
 				}
