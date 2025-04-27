@@ -34,6 +34,7 @@ type Match struct {
 	ColDescription  int    `required:"" help:"Column number for description"`
 	ColAmount       int    `required:"" help:"Column number for amount, +deposit, -withdrawal"`
 	ColWithdrawal   int    `help:"Column number for payment, if applicable"`
+	ApproxTransfer  string `help:"String to find in description to approximately match transfers by month"`
 }
 
 type accountMapping map[string]int
@@ -101,9 +102,13 @@ func (m Match) Run(ctx context.Context, a API) error {
 			}
 		}
 
+		formattedDate := date.Format("2006-01-02")
+		if len(m.ApproxTransfer) > 0 && strings.HasPrefix(record[m.ColDescription-1], m.ApproxTransfer) {
+			formattedDate = strings.Replace(formattedDate, formattedDate[8:10], "xx", 1) + ` type:"Transfer"`
+		}
 		var res []transactions
 		q := make(url.Values, 1)
-		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:%s", m.AccountID, date.Format("2006-01-02"), amount, m.Tag))
+		q.Add("query", fmt.Sprintf("account_id:%d date_on:%s amount:%s -tag_is:%s", m.AccountID, formattedDate, amount, m.Tag))
 		if err := Do(ctx, a, http.MethodGet, "search/transactions", q, &res, nil); err != nil {
 			return err
 		}
