@@ -27,9 +27,10 @@ type Match struct {
 	File            []byte `type:"filecontent" required:""`
 	Start           int    `short:"s" help:"Start at row"`
 	AssetIDs        []int  `name:"assets" help:"Asset account IDs create transfers"`
-	KeepDescription bool   `help:"Keep existing descriptions if set"`
-	Tag             string `required:"" help:"Tag to apply to matched transactions"`
+	KeepDescription bool   `help:"Keep existing descriptions if set" default:"true"`
+	Tag             string `required:"" help:"Tag to apply to matched transactions" default:"gdpr"`
 	ColDate         int    `required:"" help:"Column number for date, one-indexed"`
+	DateFormat      string `required:"" help:"Format for date column" default:"02 Jan 06"`
 	ColDescription  int    `required:"" help:"Column number for description"`
 	ColAmount       int    `required:"" help:"Column number for amount, +deposit, -withdrawal"`
 	ColWithdrawal   int    `help:"Column number for payment, if applicable"`
@@ -65,7 +66,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 			continue
 		}
 
-		date, err := time.Parse("02 Jan 06", record[m.ColDate-1])
+		date, err := time.Parse(m.DateFormat, record[m.ColDate-1])
 		if err != nil {
 			l.Warn("invalid date", slog.String("err", err.Error()), slog.String("record", record[m.ColDate-1]))
 			continue
