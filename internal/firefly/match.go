@@ -104,7 +104,7 @@ func (m Match) Run(ctx context.Context, a API) error {
 
 		formattedDate := date.Format("2006-01-02")
 		if len(m.ApproxTransfer) > 0 && strings.HasPrefix(record[m.ColDescription-1], m.ApproxTransfer) {
-			formattedDate = strings.Replace(formattedDate, formattedDate[8:10], "xx", 1) + ` type:"Transfer"`
+			formattedDate = formattedDate[0:8] + `xx type:"Transfer"`
 		}
 		var res []transactions
 		q := make(url.Values, 1)
