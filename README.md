@@ -8,7 +8,21 @@ This repository contains a collection of command-line tools to assist with parsi
 ## Tools
 
 - [cmd/firefly](cmd/firefly/main.go): Fetch data, link transactions, and match transactions from CSV files to existing Firefly transactions.
+
+	- `match` transactions from CSV to existing Firefly transactions  
+    <img src=".github/match.png" width="594">
+
+	- `link` transactions to another  
+    (identifies partial reimbursement where defined on notes)
+  
+	- `version` retrieved from Firefly  
+    (confirms authentication and connection to Firefly API)
+
+	- `fetch` from the given path  
+    (makes authenticated request to Firefly API and returns response)
+
 - [cmd/barclays](cmd/barclays/main.go): Parses Barclays microfiche statements and outputs them in CSV format, ready for the Firefly command.
+
 - [cmd/reexport](cmd/reexport/main.go): Reformats Firefly export data into a more user-friendly CSV format.
 
 > [!TIP]
