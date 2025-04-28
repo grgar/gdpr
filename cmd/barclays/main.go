@@ -1,3 +1,4 @@
+// Package main is a command line tool to parse Barclays microfiche statements and output them in a CSV format.
 package main
 
 import (

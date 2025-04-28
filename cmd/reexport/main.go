@@ -1,3 +1,4 @@
+// Package main contains the reexport command to reformat Firefly export data.
 package main
 
 import (
@@ -14,7 +15,7 @@ import (
 
 func main() {
 	in := flag.String("csv", "", "CSV file path")
-	acc := flag.String("acc", "", "Account file path")
+	acc := flag.String("acc", "", "Account ID, set as first column in output CSV")
 	flag.Parse()
 
 	file, err := os.Open(*in)
