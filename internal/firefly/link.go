@@ -16,12 +16,6 @@ type Link struct {
 	Input []byte `short:"i" help:"Substitute input" hidden:"" type:"filecontent"`
 }
 
-type payload struct {
-	Type int `json:"link_type_id"`
-	From int `json:"inward_id"`
-	To   int `json:"outward_id"`
-}
-
 func (l Link) Run(ctx context.Context, a API) error {
 	q := make(url.Values, 1)
 	q.Add("query", l.Query)
@@ -75,7 +69,11 @@ func (l Link) Run(ctx context.Context, a API) error {
 					continue
 				}
 
-				p, err := json.Marshal(payload{
+				p, err := json.Marshal(struct {
+					Type int `json:"link_type_id"`
+					From int `json:"inward_id"`
+					To   int `json:"outward_id"`
+				}{
 					Type: 3,
 					From: int(resp[0].Attributes.Transactions[0].ID),
 					To:   int(t.ID),

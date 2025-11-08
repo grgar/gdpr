@@ -52,11 +52,15 @@ func Do[T any](ctx context.Context, a API, method, path string, q url.Values, ou
 			return err
 		}
 		defer res.Body.Close()
-		if res.StatusCode != http.StatusOK {
+		switch res.StatusCode {
+		case http.StatusOK:
+			body = res.Body
+		case http.StatusNoContent:
+			return nil
+		default:
 			body, _ := io.ReadAll(io.LimitReader(res.Body, 1<<10))
 			return fmt.Errorf("status %d: %s", res.StatusCode, string(body))
 		}
-		body = res.Body
 	}
 	resp := struct {
 		Data *T `json:"data"`
